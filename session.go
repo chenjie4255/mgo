@@ -2380,6 +2380,7 @@ type LastError struct {
 	WTimeout        bool
 	UpdatedExisting bool        `bson:"updatedExisting"`
 	UpsertedId      interface{} `bson:"upserted"`
+	AllErrors       []WriteCmdError
 
 	modified int
 	ecases   []BulkErrorCase
@@ -4580,6 +4581,12 @@ type writeConcernError struct {
 	ErrMsg string
 }
 
+type WriteCmdError struct {
+	Index  int
+	Code   int
+	ErrMsg string
+}
+
 type writeCmdError struct {
 	Index  int
 	Code   int
@@ -4800,6 +4807,9 @@ func (c *Collection) writeOpCommand(socket *mongoSocket, safeOp *queryOp, op int
 		e := result.Errors[0]
 		lerr.Code = e.Code
 		lerr.Err = e.ErrMsg
+		for _, er := range result.Errors {
+			lerr.AllErrors = append(lerr.AllErrors, WriteCmdError{er.Index, er.Code, er.ErrMsg})
+		}
 		err = lerr
 	} else if result.ConcernError.Code != 0 {
 		e := result.ConcernError
